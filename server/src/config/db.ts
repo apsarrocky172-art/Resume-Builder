@@ -1,13 +1,14 @@
-import mongoose from 'mongoose';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('[Database] Missing Supabase URL or Key in environment variables.');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const connectDB = async () => {
-  try {
-    const connUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/ai_placement_db';
-    console.log(`[Database] Attempting connection to: ${connUri}`);
-    await mongoose.connect(connUri);
-    console.log('[Database] MongoDB Connected Successfully.');
-  } catch (error: any) {
-    console.error(`[Database] Connection Error: ${error.message}`);
-    console.log('[Database] Launching in-memory mock data mode fallback. All routes will simulate database states without crashing.');
-  }
+  console.log('[Database] Supabase Client Initialized.');
 };

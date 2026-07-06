@@ -1,17 +1,14 @@
+/// <reference types="react" />
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Award, Compass, Eye, ShieldCheck, Heart } from 'lucide-react';
+import { Compass, Eye, ShieldCheck, Heart } from 'lucide-react';
 
 export const About: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
       {/* Hero Header */}
       <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest"
-        >
+        <motion.div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
           Our Core Mission
         </motion.div>
         <motion.h1
@@ -21,13 +18,9 @@ export const About: React.FC = () => {
         >
           Pioneering AI-Driven Placement Preparations
         </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed"
-        >
-          We bridge the gap between academic education and modern industry demands by providingjob seekers and fresh graduates with top-tier artificial intelligence tools to build, practice, and secure jobs.
-        </motion.p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+          We bridge the gap between academic education and modern industry demands by providing job seekers and fresh graduates with top-tier artificial intelligence tools to build, practice, and secure jobs.
+        </p>
       </div>
 
       {/* Grid of Values */}
@@ -71,7 +64,7 @@ export const About: React.FC = () => {
           </div>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Crafted for Placement Cells</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Tired of tracking student spreadsheets? PlacementAI integrates directly with universities to help professors monitor aptitude metrics, schedule mock interview deadlines, and review detailed candidate stats.
+            Tired of tracking student spreadsheets? Crack Place Ai integrates directly with universities to help professors monitor aptitude metrics, schedule mock interview deadlines, and review detailed candidate stats.
           </p>
           <div className="flex gap-4">
             <div>

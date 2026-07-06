@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Bot, MessageSquare, Mic, MicOff, Volume2, ShieldAlert, Award, Star, ArrowRight, Zap } from 'lucide-react';
+import { Bot, Mic, MicOff, ShieldAlert, Award, Star, ArrowRight, Zap } from 'lucide-react';
 
 interface ChatMessage {
   role: 'ai' | 'user';
@@ -98,15 +98,9 @@ export const MockInterview: React.FC = () => {
       setMessages([{ role: 'ai', text: res.data.question }]);
       setActiveSession(true);
       speak(res.data.question);
-    } catch (error) {
-      console.warn('[Interview] Offline Mode simulation starting.');
-      // Local dynamic mock interview starters
-      const mockId = `session-${Date.now()}`;
-      setInterviewId(mockId);
-      const startText = `Welcome! I am your AI ${type.toUpperCase()} Interviewer today for the ${roleTopic} role. Let's start with: Tell me about yourself and your background.`;
-      setMessages([{ role: 'ai', text: startText }]);
-      setActiveSession(true);
-      speak(startText);
+    } catch (error: any) {
+      console.error('[Interview] Start error:', error);
+      alert(error.response?.data?.message || 'Failed to start interview. Check if LM Studio and Supabase are running.');
     } finally {
       setLoading(false);
     }
@@ -126,30 +120,9 @@ export const MockInterview: React.FC = () => {
       });
       setMessages(prev => [...prev, { role: 'ai', text: res.data.question }]);
       speak(res.data.question);
-    } catch (error) {
-      console.warn('[Interview] Chat turning simulated locally.');
-      // Local chat simulation turning logic
-      setTimeout(() => {
-        const technicalPrompts = [
-          `Can you explain the differences between relational (SQL) and non-relational (NoSQL) databases?`,
-          `Interesting details. What is your process for optimizing frontend load times or database index queries?`,
-          `That concludes my set of structured questions. Do you have any questions for me before we wrap up?`
-        ];
-
-        const hrPrompts = [
-          `Why do you want to join our organization, and what makes you a good fit for this role?`,
-          `Tell me about a time you had a conflict within a team or project group. How did you resolve it?`,
-          `That concludes my structured questions. Do you have any questions for me regarding team culture?`
-        ];
-
-        const prompts = type === 'technical' ? technicalPrompts : hrPrompts;
-        const currentTurns = messages.filter(m => m.role === 'user').length;
-        const nextQ = prompts[Math.min(currentTurns, prompts.length - 1)];
-
-        setMessages(prev => [...prev, { role: 'ai', text: nextQ }]);
-        speak(nextQ);
-        setSubmittingAnswer(false);
-      }, 1500);
+    } catch (error: any) {
+      console.error('[Interview] Chat error:', error);
+      alert(error.response?.data?.message || 'Failed to get AI response. Check LM Studio.');
     } finally {
       setSubmittingAnswer(false);
     }
@@ -166,33 +139,9 @@ export const MockInterview: React.FC = () => {
       setEvaluation(res.data);
       setActiveSession(false);
       setCompleted(true);
-    } catch (error) {
-      console.warn('[Interview] Finalizing and scoring simulated locally.');
-      // Local evaluation simulator fallback
-      setTimeout(() => {
-        setEvaluation({
-          scores: { technical: 88, communication: 90, confidence: 85, overall: 88 },
-          feedback: {
-            strengths: [
-              'Excellent articulation of personal project architecture.',
-              'Demonstrated clear understanding of core software paradigms.',
-              'Kept a highly confident and structured tone throughout the discussion.'
-            ],
-            weaknesses: [
-              'Could provide more numeric metrics to qualify achievements.',
-              type === 'technical' ? 'Database indexing rationale could be detailed further.' : 'Conflict resolution stories could follow the STAR framework more strictly.'
-            ],
-            suggestions: [
-              'Study detailed performance profiling tools (e.g., Lighthouse, query planners).',
-              'Practice structuring behavioral questions strictly utilizing the Situation, Task, Action, Result methodology.'
-            ],
-            detailedAnalysis: `The candidate showed a solid grasp of ${roleTopic} concepts. Communication was highly fluid and the answers were structured logically. Technical assertions were sound, but would benefit from further quantitative descriptions of work results.`
-          }
-        });
-        setActiveSession(false);
-        setCompleted(true);
-        setLoading(false);
-      }, 2000);
+    } catch (error: any) {
+      console.error('[Interview] Finalizing error:', error);
+      alert(error.response?.data?.message || 'Failed to grade interview.');
     } finally {
       setLoading(false);
     }

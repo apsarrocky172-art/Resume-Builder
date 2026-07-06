@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Star, Users } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Pricing: React.FC = () => {

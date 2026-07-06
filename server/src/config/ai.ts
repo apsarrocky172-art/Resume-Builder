@@ -1,55 +1,75 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Standard prompt-oriented structure that integrates OpenAI or returns highly tailored mock SaaS suggestions
-export const analyzeResumeAI = async (resumeData: any): Promise<any> => {
-  const hasKey = !!process.env.OPENAI_API_KEY;
-  if (!hasKey) {
-    // Generate intelligent simulation based on inputs
-    const score = Math.floor(Math.random() * 20) + 72; // realistic 72-92 score
-    const skills = resumeData.skills || [];
-    const missing = ['Docker', 'CI/CD Pipelines', 'System Design', 'Jest/Unit Testing', 'Redis'].filter(
-      s => !skills.map((sk: string) => sk.toLowerCase()).includes(s.toLowerCase())
-    );
-    const mockSuggestions = [
-      'Quantify project outcomes (e.g., \"improved load times by 40%\" instead of \"built a fast website\").',
-      'Move critical technical skills closer to the top of the resume.',
-      'Ensure standard, single-column margins for optimal ATS scanner parsing.'
-    ];
+// The Ollama model to use. Hardcoding to user's requested cloud model to bypass cached environment variables.
+const OLLAMA_MODEL = 'gemma4:31b-cloud';
+const OLLAMA_URL = 'http://localhost:11434/api/chat';
 
-    return {
-      score,
-      missingKeywords: missing.slice(0, 3),
-      layoutRating: score > 85 ? 'Excellent' : 'Good',
-      contentSuggestions: mockSuggestions,
-      optimizedSummary: `Result-driven professional with expertise in ${skills.slice(0, 3).join(', ') || 'Software Development'}. Demonstrated ability to deliver high-quality code and optimize system performances, eager to drive growth in technology environments.`,
-      skillSuggestions: ['GraphQL', 'TypeScript', 'Kubernetes'].filter(
-        s => !skills.map((sk: string) => sk.toLowerCase()).includes(s.toLowerCase())
-      )
-    };
+const askOllama = async (messages: any[], format?: string): Promise<string> => {
+  const payload: any = {
+    model: OLLAMA_MODEL,
+    messages: messages,
+    stream: false,
+    options: {
+      num_predict: 8192
+    }
+  };
+  
+  if (format === 'json') {
+    payload.format = 'json';
   }
 
-  // If OpenAI key is present, execute actual API query
+  const response = await fetch(OLLAMA_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Ollama API error: ${response.statusText} - ${errText}`);
+  }
+
+  const data: any = await response.json();
+  return data.message?.content || '';
+};
+
+// Helper to safely parse JSON from LLMs that return Markdown code blocks or conversational filler
+const extractJSON = (content: string, fallback: string) => {
   try {
-    const { default: OpenAI } = require('openai');
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an elite corporate hiring director and ATS scanning system. Analyze the provided resume JSON and return a JSON object with: { "score": number, "missingKeywords": string[], "layoutRating": string, "contentSuggestions": string[], "optimizedSummary": string, "skillSuggestions": string[] }.'
-        },
-        {
-          role: 'user',
-          content: JSON.stringify(resumeData)
-        }
-      ]
-    });
-    return JSON.parse(response.choices[0].message?.content || '{}');
+    const text = content || '';
+    // Use regex to aggressively hunt down the first code block that looks like JSON
+    const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (match && match[1]) {
+      return JSON.parse(match[1].trim());
+    }
+    // If no code block, just attempt parsing the raw string
+    return JSON.parse(text.trim());
+  } catch (e) {
+    console.error('Failed to parse LLM JSON:', content);
+    return JSON.parse(fallback);
+  }
+};
+
+// ==========================================
+// AI Features
+// ==========================================
+
+export const analyzeResumeAI = async (resumeData: any): Promise<any> => {
+  try {
+    const content = await askOllama([
+      {
+        role: 'system',
+        content: 'You are an elite corporate hiring director and ATS scanning system. Analyze the provided resume (which can be either a structured JSON object or plain text) and return a JSON object with: { "score": number, "keywordScore": number, "skillsScore": number, "experienceScore": number, "educationScore": number, "formattingScore": number, "missingKeywords": string[], "layoutRating": string, "contentSuggestions": string[], "optimizedSummary": string, "skillSuggestions": string[], "predictedJobs": string[] }. Ensure keywordScore is out of 40, skillsScore is out of 25, experienceScore is out of 15, educationScore is out of 10, and formattingScore is out of 10. The sum of these sub-scores must equal the overall score (which is out of 100). The predictedJobs list should contain 3-5 developer or software engineering roles matching this candidate\'s skills.'
+      },
+      {
+        role: 'user',
+        content: JSON.stringify(resumeData)
+      }
+    ], 'json');
+    return extractJSON(content, '{}');
   } catch (error: any) {
-    console.error('[AI Service] OpenAI Resume Error:', error);
+    console.error('[AI Service] Ollama Resume Error:', error);
     throw error;
   }
 };
@@ -59,57 +79,22 @@ export const getInterviewQuestionAI = async (
   roleTopic: string,
   history: Array<{ role: 'ai' | 'user'; text: string }>
 ): Promise<string> => {
-  const hasKey = !!process.env.OPENAI_API_KEY;
-  if (!hasKey) {
-    const length = history.length;
-    if (length === 0) {
-      return `Welcome to the mock interview! I am your AI ${type.toUpperCase()} Interviewer today for the ${roleTopic} role. Let's start with: Tell me about yourself and your background.`;
-    }
-
-    const lastUserResponse = history[history.length - 1]?.text || '';
-    const technicalPrompts = [
-      `That is quite interesting. Can you explain the difference between relational databases (SQL) and non-relational databases (NoSQL)? Under what conditions would you favor MongoDB over MySQL?`,
-      `Excellent. Speaking of databases and state management, how do you handle security and state synchronization in a high-traffic production application?`,
-      `Thank you. Let's shift a bit towards your experience. Can you explain a challenging bug or architecture problem you solved in one of your projects, and how you approached it?`,
-      `Nice explanation. What is your process for optimizing frontend load times or database query execution plans?`
-    ];
-
-    const hrPrompts = [
-      `Thanks for sharing. Why do you want to join our organization, and what makes you a good fit for this role?`,
-      `Interesting perspective. Tell me about a time you had a conflict within a team or project group. How did you resolve it and what did you learn?`,
-      `Thank you. Where do you see yourself in the next five years, and what professional milestones do you hope to reach?`,
-      `Wonderful. Do you have any questions for me about the company culture, expectations, or the team structure?`
-    ];
-
-    const promptList = type === 'technical' ? technicalPrompts : hrPrompts;
-    const index = Math.floor(length / 2);
-    if (index >= promptList.length) {
-      return `That concludes my list of structured questions for today. Is there anything else you would like to elaborate on regarding your qualifications before I finalize your score?`;
-    }
-    return promptList[index];
-  }
-
   try {
-    const { default: OpenAI } = require('openai');
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const formattedMessages = history.map(h => ({
       role: h.role === 'ai' ? 'assistant' : 'user',
       content: h.text
     }));
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert AI interviewer conducting a ${type} interview for the ${roleTopic} role. Ask professional, context-appropriate questions. Follow up logically on the user's answers. Ask only one concise question at a time.`
-        },
-        ...formattedMessages
-      ]
-    });
-    return response.choices[0].message?.content || 'Could you elaborate on that?';
+    const content = await askOllama([
+      {
+        role: 'system',
+        content: `You are an expert AI interviewer conducting a ${type} interview for the ${roleTopic} role. Ask professional, context-appropriate questions. Follow up logically on the user's answers. Ask only one concise question at a time.`
+      },
+      ...formattedMessages
+    ]);
+    return content || '';
   } catch (error) {
-    console.error('[AI Service] OpenAI Interview Error:', error);
-    return 'Could you elaborate on your experience with scaling systems and handling asynchronous workflows?';
+    console.error('[AI Service] Ollama Interview Error:', error);
+    throw error;
   }
 };
 
@@ -118,85 +103,188 @@ export const gradeInterviewAI = async (
   roleTopic: string,
   transcript: Array<{ role: 'ai' | 'user'; text: string }>
 ): Promise<any> => {
-  const hasKey = !!process.env.OPENAI_API_KEY;
-  if (!hasKey) {
-    // Generate intelligent simulation scores
-    const technical = type === 'hr' ? Math.floor(Math.random() * 10) + 82 : Math.floor(Math.random() * 15) + 75;
-    const communication = Math.floor(Math.random() * 12) + 80;
-    const confidence = Math.floor(Math.random() * 10) + 85;
-    const overall = Math.floor((technical + communication + confidence) / 3);
-
-    return {
-      scores: { technical, communication, confidence, overall },
-      feedback: {
-        strengths: [
-          'Excellent articulation of personal project architecture.',
-          'Demonstrated clear understanding of core software paradigms.',
-          'Kept a highly confident and structured tone throughout the discussion.'
-        ],
-        weaknesses: [
-          'Could provide more numeric metrics to qualify achievements.',
-          type === 'technical' ? 'Database indexing rationale could be detailed further.' : 'Conflict resolution stories could follow the STAR framework more strictly.'
-        ],
-        suggestions: [
-          'Study detailed performance profiling tools (e.g., Lighthouse, query planners).',
-          'Practice structuring behavioral questions strictly utilizing the Situation, Task, Action, Result methodology.'
-        ],
-        detailedAnalysis: `The candidate showed a solid grasp of ${roleTopic} concepts. Communication was highly fluid and the answers were structured logically. Technical assertions were sound, but would benefit from further quantitative descriptions of work results.`
-      }
-    };
-  }
-
   try {
-    const { default: OpenAI } = require('openai');
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an elite corporate interviewer. Evaluate the provided interview transcript and grade the candidate. Return a JSON object with: { "scores": { "technical": number, "communication": number, "confidence": number, "overall": number }, "feedback": { "strengths": string[], "weaknesses": string[], "suggestions": string[], "detailedAnalysis": string } }.'
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({ type, roleTopic, transcript })
-        }
-      ]
-    });
-    return JSON.parse(response.choices[0].message?.content || '{}');
+    const content = await askOllama([
+      {
+        role: 'system',
+        content: 'You are an elite corporate interviewer. Evaluate the provided interview transcript and grade the candidate. Return a JSON object with: { "scores": { "technical": number, "communication": number, "confidence": number, "overall": number }, "feedback": { "strengths": string[], "weaknesses": string[], "suggestions": string[], "detailedAnalysis": string } }.'
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({ type, roleTopic, transcript })
+      }
+    ], 'json');
+    return extractJSON(content, '{}');
   } catch (error) {
-    console.error('[AI Service] OpenAI Grading Error:', error);
+    console.error('[AI Service] Ollama Grading Error:', error);
     throw error;
   }
 };
 
-export const getCompanyRoadmapAI = async (company: string, skills: string[]): Promise<any> => {
-  const steps = [
-    {
-      title: 'Phase 1: Foundation (Aptitude & DSA)',
-      topics: ['Quantitative Tricks', 'Dynamic Programming', 'Data Structures (Trees & Graphs)'],
-      description: `Prepare extensively on arrays, strings, and standard algorithmic loops. ${company} focuses heavily on raw problem solving.`
-    },
-    {
-      title: 'Phase 2: Core Domain Practice',
-      topics: skills.length > 0 ? skills.slice(0, 3) : ['Full Stack development', 'System Design Basics'],
-      description: `Deep dive into system optimization, databases, and structural coding challenges matching standard ${company} technical sheets.`
-    },
-    {
-      title: 'Phase 3: Company-Specific Mock Runs',
-      topics: [`${company} Past Questions`, 'Behavioral Alignment (STAR framework)'],
-      description: 'Practice simulated coding contests and time-restricted verbal reasoning modules.'
-    }
-  ];
-
-  return {
-    company,
-    steps,
+export const getCompanyRoadmapAI = async (company: string, role: string, skills: string[]): Promise<any> => {
+  const fallbackRoadmap = {
+    company: company.toUpperCase(),
+    role: role.toUpperCase(),
+    steps: [
+      {
+        title: 'Phase 1: Application Submission & ATS Screening (2026)',
+        topics: ['ATS Keywords', 'Referral Network', 'Online Portals'],
+        description: `Apply for the ${role} position at ${company} via their official portal or using a referral. Ensure your resume contains relevant keywords matching 2026 hiring metrics.`
+      },
+      {
+        title: 'Phase 2: Online Technical Assessment (OA)',
+        topics: ['Data Structures & Algorithms', 'Aptitude & Logic', 'Domain Quizzes'],
+        description: `Complete the initial automated tests on platforms like HackerRank or SHL. Expect coding, math, and role-specific technical questions.`
+      },
+      {
+        title: 'Phase 3: Technical & Domain Interviews',
+        topics: ['Problem Solving', 'System Design / Architecture', 'Project Walkthrough'],
+        description: `One or more interviews testing coding skills, computer science basics, and domain expertise relevant to ${role}.`
+      },
+      {
+        title: 'Phase 4: HR Interview & Offer Negotiation',
+        topics: ['Behavioral Scenarios', 'Salary Structure', 'Culture Fit Check'],
+        description: `A standard interview discussing package details, work locations, and behavioral fit questions using the STAR methodology.`
+      },
+      {
+        title: 'Phase 5: Background Check & Final Joining Mail',
+        topics: ['Onboarding Verification', 'Document Checks', 'Onboarding Schedule'],
+        description: `Complete security background verification. Once verified, you will receive the final Joining Mail containing onboarding details, date of joining, and setup instructions.`
+      }
+    ],
     tips: [
       `Review ${company} specific culture guidelines.`,
-      'Do not jump into coding immediately: outline system complexity and constraints first.',
-      'Quantify your project outcomes clearly.'
+      `In 2026, most OAs have strict anti-cheat monitoring: ensure a stable workspace.`,
+      'Prepare 2 professional projects to explain in detail.'
     ]
   };
+
+  try {
+    const skillsList = skills.length > 0 ? skills.join(', ') : 'general development and problem-solving skills';
+    const content = await askOllama([
+      {
+        role: 'system',
+        content: `You are a master career counselor and technical placement director. Create a step-by-step preparation and recruitment timeline roadmap for a student applying to a target company and role.
+        
+        CRITICAL INSTRUCTIONS:
+        1. The roadmap MUST be a complete, chronological step-by-step guide beginning with the Initial Application and ending with receiving the final Onboarding/Joining Mail.
+        2. Provide highly specific, recent recruitment information valid for the current year 2026 (e.g., mention 2026 hiring trends, online assessment platforms, coding test patterns, interview processes, document verification, and joining timelines).
+        3. The language must be extremely clear, friendly, and simple for college students and freshers to easily understand.
+        4. Return a JSON object matching this structure exactly:
+        {
+          "company": "Company Name",
+          "role": "Role Name",
+          "steps": [
+            {
+              "title": "Phase 1: Initial Application & ATS Screening",
+              "topics": ["Resume Tuning", "Referral Sourcing"],
+              "description": "Description explaining the application step..."
+            }
+          ],
+          "tips": [
+            "Tip 1...",
+            "Tip 2..."
+          ]
+        }`
+      },
+      {
+        role: 'user',
+        content: `Generate a detailed step-by-step preparation and hiring roadmap for Company: "${company}", Role: "${role}", using candidate skills: "${skillsList}". Remember to include 2026 updates and cover everything up to the final joining mail.`
+      }
+    ], 'json');
+
+    const roadmap = extractJSON(content, '{}');
+    if (roadmap && roadmap.steps && Array.isArray(roadmap.steps) && roadmap.steps.length > 0) {
+      return {
+        company: (roadmap.company || company).toUpperCase(),
+        role: (roadmap.role || role).toUpperCase(),
+        steps: roadmap.steps,
+        tips: roadmap.tips || fallbackRoadmap.tips
+      };
+    }
+    return fallbackRoadmap;
+  } catch (error) {
+    console.error('[AI Service] Ollama Roadmap Error:', error);
+    return fallbackRoadmap;
+  }
 };
+
+export const generateAptitudeQuestionsAI = async (category: string, limit: number): Promise<any> => {
+  try {
+    const content = await askOllama([
+      {
+        role: 'system',
+        content: `You are an expert examiner. Generate exactly ${limit} multiple-choice aptitude questions for the category '${category}'. Return a JSON object with a single key 'questions' containing an array of objects. Each object must have: 'id' (a random string), 'type' (always 'aptitude'), 'category' ('${category}'), 'difficulty' (choose randomly from 'easy', 'medium', 'hard'), 'questionText' (string), 'options' (array of 4 strings), 'correctOption' (number 0-3), and 'explanation' (string explaining the answer).`
+      }
+    ], 'json');
+    const result = extractJSON(content, '{"questions":[]}');
+    return result.questions || [];
+  } catch (error) {
+    console.error('[AI Service] Ollama Aptitude Gen Error:', error);
+    throw new Error('AI Model failed to generate aptitude questions. Is Ollama running?');
+  }
+};
+
+export const generateCodingChallengesAI = async (difficulty: string): Promise<any> => {
+  try {
+    const content = await askOllama([
+      {
+        role: 'system',
+        content: `You are an expert coding instructor. Generate 3 coding challenges of '${difficulty}' difficulty. Return a JSON object with a key 'challenges' containing an array of objects. Each object must have: 'id' (a random string), 'type' (always 'coding'), 'category' ('algorithms'), 'difficulty' ('${difficulty}'), 'questionText' (string explaining the problem, constraints, and examples), 'codeTemplate' (string, starting boilerplate code), 'companyTags' (array of strings, e.g. ['Google', 'Amazon']), and 'testCases' (array of objects with 'input' and 'output' strings).`
+      }
+    ], 'json');
+    const result = extractJSON(content, '{"challenges":[]}');
+    return result.challenges || [];
+  } catch (error) {
+    console.error('[AI Service] Ollama Coding Gen Error:', error);
+    throw new Error('AI Model failed to generate coding challenges. Is Ollama running?');
+  }
+};
+
+export const chatAssistantAI = async (message: string, history: Array<{role: 'user'|'ai', text: string}>): Promise<string> => {
+  try {
+    const formattedMessages = history.map(h => ({
+      role: h.role === 'ai' ? 'assistant' : 'user',
+      content: h.text
+    }));
+
+    formattedMessages.push({
+      role: 'user',
+      content: message
+    });
+
+    const content = await askOllama([
+      {
+        role: 'system',
+        content: `You are the PlacementAI Assistant. Keep responses concise, helpful, and focused on resume building, interview preparation, and coding practice. Do not output markdown code blocks unless necessary.`
+      },
+      ...formattedMessages
+    ]);
+    return content;
+  } catch (error) {
+    console.error('[AI Service] Ollama Chat Error:', error);
+    return "I'm having trouble connecting to my AI brain right now. Please make sure Ollama is running!";
+  }
+};
+
+export const generateTechnicalQuizAI = async (role: string, level: string, excludeList: string[], limit: number): Promise<any> => {
+  try {
+    const excludeString = excludeList.length > 0 ? excludeList.map(q => `"${q}"`).join(', ') : 'none';
+    const content = await askOllama([
+      {
+        role: 'system',
+        content: `You are an expert technical interviewer and examiner. Generate exactly ${limit} multiple-choice technical interview questions for the target job role '${role}' targeting experience level '${level}'. Return a JSON object with a single key 'questions' containing an array of objects. Each object must have: 'id' (a random string), 'type' (always 'technical'), 'category' ('${role}'), 'difficulty' ('${level}'), 'questionText' (string, testing core concepts of the role), 'options' (array of 4 strings), 'correctOption' (number 0-3), and 'explanation' (string explaining the answer).
+        
+        CRITICAL RULES:
+        1. Do NOT repeat or generate questions that are highly similar to these previously asked questions unless it is an absolutely fundamental, critically important core concept for this role: ${excludeString}.
+        2. Ensure the level of questions matches the chosen experience level: '${level}' (e.g. beginner level, mid-level stage, or experience level questions).`
+      }
+    ], 'json');
+    const result = extractJSON(content, '{"questions":[]}');
+    return result.questions || [];
+  } catch (error) {
+    console.error('[AI Service] Ollama Tech Quiz Gen Error:', error);
+    throw new Error('AI Model failed to generate technical quiz questions. Is Ollama running?');
+  }
+};
+

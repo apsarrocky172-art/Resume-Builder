@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const resumeController_1 = require("../controllers/resumeController");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.authenticateToken);
+router.post('/', resumeController_1.saveOrUpdateResume);
+router.get('/', resumeController_1.getResume);
+router.post('/analyze', resumeController_1.analyzeResume);
+exports.default = router;

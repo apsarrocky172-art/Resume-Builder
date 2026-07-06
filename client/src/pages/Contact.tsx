@@ -32,7 +32,7 @@ export const Contact: React.FC = () => {
             </div>
             <div>
               <div className="text-[10px] text-slate-400 uppercase font-bold">Email Support</div>
-              <div className="text-xs font-semibold">support@placementai.saas.com</div>
+              <div className="text-xs font-semibold">support@crackplaceai.com</div>
             </div>
           </div>
 
@@ -69,7 +69,7 @@ export const Contact: React.FC = () => {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Apsara Roy"
+              placeholder="Alex Johnson"
               className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4.5 py-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
             />
           </div>
@@ -81,7 +81,7 @@ export const Contact: React.FC = () => {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="apsara.roy@university.edu"
+              placeholder="alex.johnson@university.edu"
               className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4.5 py-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
             />
           </div>

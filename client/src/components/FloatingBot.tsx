@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { Bot, Send, X, MessageSquare, Sparkles, Volume2, Mic, MicOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -48,6 +49,13 @@ export const FloatingBot: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('open-ai-bot', handleOpen);
+    return () => window.removeEventListener('open-ai-bot', handleOpen);
+  }, []);
+
+
   const toggleListening = () => {
     if (!recognition) {
       alert("Speech recognition is not supported in this browser. Please use Chrome/Edge.");
@@ -92,26 +100,28 @@ export const FloatingBot: React.FC = () => {
     setInput('');
     setIsTyping(true);
 
-    // Simulate standard prompt queries locally
-    setTimeout(() => {
-      let reply = "That's a great question. Let me look that up for you. To score high in ATS tests, ensure your resume contains key tools (e.g. Docker, SQL) rather than generalized nouns. Also, utilize the STAR framework (Situation, Task, Action, Result) in behavioral mocks!";
+    try {
+      // Pass the previous history so the bot has context
+      const history = messages.map(m => ({ role: m.sender, text: m.text }));
+      const token = localStorage.getItem('token');
       
-      const query = textToSend.toLowerCase();
-      if (query.includes('resume') || query.includes('cv')) {
-        reply = "For a high resume score, use a single-column, clear layout. List your technical skills near the header, and always quantify achievements (e.g., 'Enhanced query efficiency by 30% using Redis indexing').";
-      } else if (query.includes('interview') || query.includes('mock')) {
-        reply = "When preparing for interviews, start with a confident 60-second summary. In technical rounds, always walk through your algorithmic approach out loud before writing a single line of code!";
-      } else if (query.includes('roadmap') || query.includes('prepare')) {
-        reply = "Our Job portal offers specific roadmaps for companies like Deloitte, Amazon, and Razorpay. Review standard Quantitative Aptitude and trees/graphs algorithmic puzzles daily.";
-      } else if (query.includes('hello') || query.includes('hi')) {
-        reply = "Hello there! Happy placement preparation. Ask me any resume, interview, or coding challenge questions.";
-      }
-
+      const res = await axios.post(
+        'http://localhost:5000/api/placement/bot-chat', 
+        { message: textToSend, history },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const reply = res.data.reply;
       const aiMsgId = (Date.now() + 1).toString();
       setMessages(prev => [...prev, { id: aiMsgId, sender: 'ai', text: reply }]);
-      setIsTyping(false);
       speak(reply);
-    }, 1500);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMsg = "I'm sorry, I couldn't connect to my AI server. Please make sure you are logged in and Ollama is running.";
+      setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'ai', text: errorMsg }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const quickPrompts = [
@@ -164,7 +174,7 @@ export const FloatingBot: React.FC = () => {
 
             {/* Chat Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-[#070b13]/20">
-              {messages.map((msg) => (
+              {messages.map((msg: Message) => (
                 <div
                   key={msg.id}
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}

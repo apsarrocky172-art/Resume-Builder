@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Briefcase, Map, Compass, ShieldCheck, Search, ChevronRight, Check } from 'lucide-react';
+import { Compass, Search, Check } from 'lucide-react';
 
 interface JobListing {
   _id: string;
@@ -15,12 +15,13 @@ interface JobListing {
 }
 
 export const Jobs: React.FC = () => {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [recommendedJobs, setRecommendedJobs] = useState<JobListing[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
 
   // Roadmap states
   const [companySearch, setCompanySearch] = useState('Razorpay');
+  const [roleSearch, setRoleSearch] = useState('Software Engineer');
   const [roadmap, setRoadmap] = useState<any>(null);
   const [loadingRoadmap, setLoadingRoadmap] = useState(false);
 
@@ -68,12 +69,12 @@ export const Jobs: React.FC = () => {
 
   // Load preparation roadmap
   const fetchRoadmap = async () => {
-    if (!companySearch.trim()) return;
+    if (!companySearch.trim() || !roleSearch.trim()) return;
     setLoadingRoadmap(true);
     setRoadmap(null);
 
     try {
-      const res = await axios.get(`http://localhost:5000/api/jobs/roadmap/${companySearch}`, {
+      const res = await axios.get(`http://localhost:5000/api/jobs/roadmap/${companySearch}?role=${encodeURIComponent(roleSearch)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRoadmap(res.data);
@@ -82,27 +83,38 @@ export const Jobs: React.FC = () => {
       setTimeout(() => {
         setRoadmap({
           company: companySearch.toUpperCase(),
+          role: roleSearch.toUpperCase(),
           steps: [
             {
-              title: 'Phase 1: Foundation (Aptitude & DSA)',
-              topics: ['Quantitative Tricks', 'Dynamic Programming', 'Data Structures (Trees & Graphs)'],
-              description: `Prepare extensively on arrays, strings, and standard algorithmic loops. ${companySearch} focuses heavily on raw problem solving.`
+              title: 'Phase 1: Initial Application & Resume Screening (2026 Process)',
+              topics: ['ATS Optimization', 'Referral Outreach', 'Job Portal Registration'],
+              description: `Submit application for ${roleSearch} role at ${companySearch} via portal or employee referral. Ensure high ATS score matching for 2026 requirements.`
             },
             {
-              title: 'Phase 2: Core Domain Practice',
-              topics: ['Full Stack development', 'System Design Basics'],
-              description: `Deep dive into system optimization, databases, and structural coding challenges matching standard ${companySearch} technical sheets.`
+              title: 'Phase 2: Online Assessments & Coding Challenge',
+              topics: ['DSA/Problem Solving', 'Aptitude Test', 'Core CS Fundamentals'],
+              description: `Prepare for ${companySearch}'s technical evaluation, typically consisting of online coding challenges, logical reasoning, and data structure quizzes.`
             },
             {
-              title: 'Phase 3: Company-Specific Mock Runs',
-              topics: [`${companySearch} Past Questions`, 'Behavioral Alignment (STAR framework)'],
-              description: 'Practice simulated coding contests and time-restricted verbal reasoning modules.'
+              title: 'Phase 3: Technical & System Design Interviews',
+              topics: ['Live Coding', 'System Architecture', 'Domain-specific Questions'],
+              description: `Multiple technical panel rounds focusing on coding efficiency, system design patterns, and past projects related to ${roleSearch}.`
+            },
+            {
+              title: 'Phase 4: Behavioral Fit & Salary Negotiation',
+              topics: ['STAR Method Answers', 'Culture Fit', 'Compensation Discussion'],
+              description: 'Evaluate culture fit with HR and Hiring Managers. Discussion of salary components, benefits, and standard timeline alignment.'
+            },
+            {
+              title: 'Phase 5: Background Verification & Final Joining Mail',
+              topics: ['Document Submission', 'Pre-onboarding Briefing', 'Joining Mail Confirmation'],
+              description: 'Successful background checks are completed, leading to the final Onboarding instructions and receiving the official Joining Mail with start details.'
             }
           ],
           tips: [
-            `Review ${companySearch} specific culture guidelines.`,
-            'Do not jump into coding immediately: outline system complexity and constraints first.',
-            'Quantify your project outcomes clearly.'
+            `Make sure your resume lists skills relevant to ${roleSearch}.`,
+            `Typically, it takes 4 to 8 weeks from the date of application to receiving the joining mail in 2026.`,
+            `Follow up professionally with your recruiter if there is no update within 10 days of your interview.`
           ]
         });
         setLoadingRoadmap(false);
@@ -201,21 +213,33 @@ export const Jobs: React.FC = () => {
           <p className="text-xs text-slate-400 mt-1">Get custom preparation phases designed for specific companies.</p>
         </div>
 
-        {/* Search bar */}
-        <div className="glass-card p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/40 flex items-center gap-2">
-          <Search size={16} className="text-slate-400" />
-          <input
-            type="text"
-            value={companySearch}
-            onChange={(e) => setCompanySearch(e.target.value)}
-            placeholder="e.g. Google, Amazon, Razorpay"
-            className="flex-1 bg-transparent text-xs outline-none"
-          />
+        {/* Search bar and Role input */}
+        <div className="glass-card p-4.5 rounded-2xl border border-slate-200/50 dark:border-slate-800/40 space-y-3 bg-white/50 dark:bg-slate-950/40">
+          <div className="flex items-center gap-2 border-b border-slate-200/50 dark:border-slate-800/40 pb-2">
+            <Search size={16} className="text-slate-400" />
+            <input
+              type="text"
+              value={companySearch}
+              onChange={(e) => setCompanySearch(e.target.value)}
+              placeholder="Company Name (e.g. Google, Razorpay)"
+              className="flex-1 bg-transparent text-xs outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-2 pb-1">
+            <Compass size={16} className="text-slate-400" />
+            <input
+              type="text"
+              value={roleSearch}
+              onChange={(e) => setRoleSearch(e.target.value)}
+              placeholder="Target Role (e.g. SDE-1, QA Engineer)"
+              className="flex-1 bg-transparent text-xs outline-none"
+            />
+          </div>
           <button
             onClick={fetchRoadmap}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-1.5 rounded-xl shadow-md transition-colors"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 rounded-xl shadow-md transition-colors"
           >
-            Go
+            Generate Roadmap
           </button>
         </div>
 
@@ -228,8 +252,8 @@ export const Jobs: React.FC = () => {
         ) : (
           roadmap && (
             <div className="space-y-6">
-              <h3 className="font-extrabold text-sm bg-gradient-to-r from-indigo-500 to-pink-500 text-white px-4 py-2 rounded-xl text-center shadow-md capitalize">
-                {roadmap.company} Preparation Path
+              <h3 className="font-extrabold text-xs bg-gradient-to-r from-indigo-500 to-pink-500 text-white px-4 py-2.5 rounded-xl text-center shadow-md uppercase tracking-wider">
+                {roadmap.company} • {roadmap.role || 'PLACEMENT'}
               </h3>
 
               {/* Steps timeline */}

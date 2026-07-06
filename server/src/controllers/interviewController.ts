@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import Interview from '../models/Interview';
+import { supabase } from '../config/db';
 import { getInterviewQuestionAI, gradeInterviewAI } from '../config/ai';
 
 export const startInterview = async (req: AuthRequest, res: Response) => {
@@ -15,18 +15,24 @@ export const startInterview = async (req: AuthRequest, res: Response) => {
 
     const firstQuestion = await getInterviewQuestionAI(type, roleTopic, []);
 
-    const interview = new Interview({
-      userId,
-      type,
-      roleTopic,
-      transcript: [{ role: 'ai', text: firstQuestion }],
-      status: 'in-progress'
-    });
+    const { data: interview, error } = await supabase
+      .from('interviews')
+      .insert([
+        {
+          user_id: userId,
+          type,
+          role_topic: roleTopic,
+          transcript: [{ role: 'ai', text: firstQuestion }],
+          status: 'in-progress'
+        }
+      ])
+      .select()
+      .single();
 
-    await interview.save();
+    if (error) throw error;
 
     res.status(200).json({
-      interviewId: interview._id,
+      interviewId: interview.id,
       question: firstQuestion
     });
   } catch (error: any) {
@@ -41,24 +47,35 @@ export const chatInterview = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'interviewId and text are required' });
     }
 
-    const interview = await Interview.findById(interviewId);
-    if (!interview || interview.status !== 'in-progress') {
+    const { data: interview, error: fetchError } = await supabase
+      .from('interviews')
+      .select('*')
+      .eq('id', interviewId)
+      .single();
+
+    if (fetchError || !interview || interview.status !== 'in-progress') {
       return res.status(404).json({ message: 'Active interview session not found' });
     }
 
     // Push User statement to transcript
-    interview.transcript.push({ role: 'user', text });
+    const newTranscript = [...(interview.transcript || []), { role: 'user', text }];
 
     // Generate Follow-up
     const nextQuestion = await getInterviewQuestionAI(
       interview.type,
-      interview.roleTopic,
-      interview.transcript
+      interview.role_topic,
+      newTranscript
     );
 
     // Push AI question to transcript
-    interview.transcript.push({ role: 'ai', text: nextQuestion });
-    await interview.save();
+    newTranscript.push({ role: 'ai', text: nextQuestion });
+
+    const { error: updateError } = await supabase
+      .from('interviews')
+      .update({ transcript: newTranscript })
+      .eq('id', interviewId);
+
+    if (updateError) throw updateError;
 
     res.status(200).json({
       question: nextQuestion
@@ -75,25 +92,37 @@ export const finalizeInterview = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'interviewId is required' });
     }
 
-    const interview = await Interview.findById(interviewId);
-    if (!interview) {
+    const { data: interview, error: fetchError } = await supabase
+      .from('interviews')
+      .select('*')
+      .eq('id', interviewId)
+      .single();
+
+    if (fetchError || !interview) {
       return res.status(404).json({ message: 'Interview session not found' });
     }
 
     // Call LLM grader
-    const grading = await gradeInterviewAI(interview.type, interview.roleTopic, interview.transcript);
+    const grading = await gradeInterviewAI(interview.type, interview.role_topic, interview.transcript);
 
-    interview.scores = grading.scores;
-    interview.feedback = grading.feedback;
-    interview.status = 'completed';
+    const { data: updated, error: updateError } = await supabase
+      .from('interviews')
+      .update({
+        scores: grading.scores,
+        feedback: grading.feedback,
+        status: 'completed'
+      })
+      .eq('id', interviewId)
+      .select()
+      .single();
 
-    await interview.save();
+    if (updateError) throw updateError;
 
     res.status(200).json({
       message: 'Interview evaluated successfully',
-      scores: interview.scores,
-      feedback: interview.feedback,
-      transcript: interview.transcript
+      scores: updated.scores,
+      feedback: updated.feedback,
+      transcript: updated.transcript
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

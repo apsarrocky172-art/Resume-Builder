@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Plus, Trash2, Award, Users, BookOpen, Briefcase, BarChart3, Settings } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
   const { token } = useAuth();
@@ -22,6 +22,7 @@ export const AdminPanel: React.FC = () => {
   const [qOptions, setQOptions] = useState<string[]>(['', '', '', '']);
   const [qCorrect, setQCorrect] = useState(0);
   const [qExplanation, setQExplanation] = useState('');
+  const [qImageUrl, setQImageUrl] = useState('');
 
   // Job Form states
   const [jTitle, setJTitle] = useState('');
@@ -58,7 +59,7 @@ export const AdminPanel: React.FC = () => {
       type: qType,
       category: qCategory,
       difficulty: qDifficulty,
-      questionText: qText,
+      questionText: qImageUrl.trim() ? `[IMAGE: ${qImageUrl.trim()}] ${qText}` : qText,
       explanation: qExplanation
     };
 
@@ -76,6 +77,7 @@ export const AdminPanel: React.FC = () => {
       setMessage('✓ Placement question created successfully in database!');
       setQText('');
       setQExplanation('');
+      setQImageUrl('');
       setQOptions(['', '', '', '']);
     } catch (error) {
       console.warn('[Admin] Offline simulator mode.');
@@ -215,6 +217,16 @@ export const AdminPanel: React.FC = () => {
                 onChange={(e) => setQText(e.target.value)}
                 placeholder="A train 120 m long..."
                 className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 outline-none resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Question Image URL (Optional)</label>
+              <input
+                type="text"
+                value={qImageUrl}
+                onChange={(e) => setQImageUrl(e.target.value)}
+                placeholder="e.g., /images/puzzles/switches.png or https://example.com/image.png"
+                className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 outline-none mb-1"
               />
             </div>
 

@@ -46,16 +46,38 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; roles?: string[] }> 
 };
 
 export const AppContent: React.FC = () => {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070b13] text-slate-900 dark:text-slate-100 flex flex-col">
-      <Navbar />
+      {user && <Navbar />}
       <main className="flex-grow">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/features" element={<Features />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/contact" element={<Contact />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/about" element={
+            <ProtectedRoute>
+              <About />
+            </ProtectedRoute>
+          } />
+          <Route path="/features" element={
+            <ProtectedRoute>
+              <Features />
+            </ProtectedRoute>
+          } />
+          <Route path="/pricing" element={
+            <ProtectedRoute>
+              <Pricing />
+            </ProtectedRoute>
+          } />
+          <Route path="/contact" element={
+            <ProtectedRoute>
+              <Contact />
+            </ProtectedRoute>
+          } />
           <Route path="/login" element={<LoginRegister />} />
 
           {/* Protected Student Routes */}
@@ -96,7 +118,10 @@ export const AppContent: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <FloatingBot />
+      <footer className="w-full text-center py-5 text-xs font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-200/50 dark:border-slate-800/40 mt-auto bg-slate-50 dark:bg-[#070b13]">
+        &copy; {new Date().getFullYear()} Crack Place Ai. All rights reserved. Designed & Developed by <span className="text-indigo-500 font-extrabold">ApsarDev</span>.
+      </footer>
+      {user && <FloatingBot />}
     </div>
   );
 };

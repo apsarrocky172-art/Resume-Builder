@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, Menu, X, Rocket, LogOut, User as UserIcon } from 'lucide-react';
+import { Sun, Moon, Menu, X, LogOut, User as UserIcon } from 'lucide-react';
+import logo from '../logo.jpg';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -39,11 +40,9 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="bg-gradient-to-tr from-indigo-500 to-pink-500 p-2 rounded-xl text-white glow-ring">
-              <Rocket size={20} className="animate-pulse" />
-            </div>
+            <img src={logo} alt="Crack Place Ai Logo" className="h-9 w-9 object-cover rounded-xl shadow-md glow-ring" />
             <span className="font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400">
-              PlacementAI
+              Crack Place Ai
             </span>
           </Link>
 

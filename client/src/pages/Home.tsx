@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Bot, Code, Cpu, Award, Users, Star, Sparkles, ShieldCheck, ChevronRight } from 'lucide-react';
+import { ArrowRight, Bot, Code, Cpu, Award, Users, Star, Sparkles, ChevronRight } from 'lucide-react';
 
 export const Home: React.FC = () => {
   const containerVariants = {
@@ -79,7 +79,7 @@ export const Home: React.FC = () => {
 
           {/* Subheading */}
           <motion.p variants={itemVariants} className="max-w-2xl mx-auto text-lg text-slate-600 dark:text-slate-300">
-            PlacementAI is the ultimate SaaS ecosystem that designs stunning, ATS-friendly resumes, evaluates live speech mock interviews, and trains you for coding assessments.
+            Crack Place Ai is the ultimate SaaS ecosystem that designs stunning, ATS-friendly resumes, evaluates live speech mock interviews, and trains you for coding assessments.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -115,7 +115,7 @@ export const Home: React.FC = () => {
                 <span className="w-3 h-3 rounded-full bg-yellow-500/80"></span>
                 <span className="w-3 h-3 rounded-full bg-green-500/80"></span>
               </div>
-              <span className="text-[10px] text-slate-500 font-mono tracking-wider">https://placementai.sasa.dev/dashboard</span>
+              <span className="text-[10px] text-slate-500 font-mono tracking-wider">https://crackplaceai.sasa.dev/dashboard</span>
               <span className="w-4"></span>
             </div>
             {/* Visual Screen Mock */}
@@ -234,7 +234,7 @@ export const Home: React.FC = () => {
             ))}
           </div>
           <blockquote className="text-xl font-medium text-slate-700 dark:text-slate-300 leading-relaxed italic">
-            "PlacementAI helped me increase my resume's ATS score from 62 to 88 within two minutes. The simulated technical interview questions were spot-on! I scored my SDE internship at Razorpay last week."
+            "Crack Place Ai helped me increase my resume's ATS score from 62 to 88 within two minutes. The simulated technical interview questions were spot-on! I scored my SDE internship at Razorpay last week."
           </blockquote>
           <div>
             <div className="font-extrabold text-sm text-slate-900 dark:text-white">Aravind Sharma</div>

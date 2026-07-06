@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Code, Cpu, Award, Users, BookOpen, Star, RefreshCw } from 'lucide-react';
+import { Bot, Code, Award, Users, BookOpen, RefreshCw } from 'lucide-react';
 
 export const Features: React.FC = () => {
   const cards = [

@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const jobController_1 = require("../controllers/jobController");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.authenticateToken);
+router.get('/recommendations', jobController_1.getJobRecommendations);
+router.get('/roadmap/:company', jobController_1.getPrepRoadmap);
+exports.default = router;

@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const interviewController_1 = require("../controllers/interviewController");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.authenticateToken);
+router.post('/start', interviewController_1.startInterview);
+router.post('/chat', interviewController_1.chatInterview);
+router.post('/finalize', interviewController_1.finalizeInterview);
+exports.default = router;

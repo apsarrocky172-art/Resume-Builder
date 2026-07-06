@@ -7,6 +7,7 @@ interface User {
   email: string;
   role: 'student' | 'recruiter' | 'admin';
   skills?: string[];
+  education?: any;
 }
 
 interface AuthContextType {
@@ -17,6 +18,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, role?: string) => Promise<void>;
   logout: () => void;
   updateUserSkills: (skills: string[]) => void;
+  updateUserProfile: (name: string, course: string, specialization: string, photo: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,15 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setUser(res.data);
         } catch (error) {
-          console.error('[Auth] Failed to load user profile, using mock fallback', error);
-          // If server is offline, supply a beautiful local session so they can test immediately!
-          setUser({
-            id: 'mock-user-id',
-            name: 'Apsara Roy',
-            email: 'apsara.roy@university.edu',
-            role: 'student',
-            skills: ['React.js', 'JavaScript', 'HTML', 'CSS']
-          });
+          console.error('[Auth] Failed to load user profile', error);
+          logout();
         }
       }
       setLoading(false);
@@ -61,22 +56,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(res.data.token);
       setUser(res.data.user);
     } catch (error: any) {
-      console.warn('[Auth] Offline mode simulation login trigger.');
-      // Offline fallback login credentials to enable rapid prototype previewing
-      if (email && password) {
-        const dummyToken = 'dummy-jwt-token-for-preview-only';
-        localStorage.setItem('token', dummyToken);
-        setToken(dummyToken);
-        setUser({
-          id: 'mock-user-id',
-          name: email.split('@')[0].toUpperCase(),
-          email,
-          role: email.includes('admin') ? 'admin' : 'student',
-          skills: ['React.js', 'JavaScript', 'HTML', 'CSS', 'Node.js']
-        });
-      } else {
-        throw new Error(error.response?.data?.message || 'Connection failure');
-      }
+      console.error('[Auth] Login error:', error);
+      throw new Error(error.response?.data?.message || 'Login failed. Please check your credentials.');
     }
   };
 
@@ -87,17 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(res.data.token);
       setUser(res.data.user);
     } catch (error: any) {
-      console.warn('[Auth] Offline mode simulation register trigger.');
-      const dummyToken = 'dummy-jwt-token-for-preview-only';
-      localStorage.setItem('token', dummyToken);
-      setToken(dummyToken);
-      setUser({
-        id: 'mock-user-id',
-        name,
-        email,
-        role: (role as any) || 'student',
-        skills: []
-      });
+      console.error('[Auth] Register error:', error);
+      throw new Error(error.response?.data?.message || 'Registration failed.');
     }
   };
 
@@ -113,8 +85,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserProfile = async (name: string, course: string, specialization: string, photo: string) => {
+    try {
+      const res = await axios.put(`${API_URL}/auth/profile`, { name, course, specialization, photo }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUser(res.data);
+    } catch (error: any) {
+      console.error('[Auth] Profile update error:', error);
+      throw new Error(error.response?.data?.message || 'Profile update failed.');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserSkills }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserSkills, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );
