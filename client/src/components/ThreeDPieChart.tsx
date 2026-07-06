@@ -51,7 +51,7 @@ export const ThreeDPieChart: React.FC<ThreeDPieChartProps> = ({ readinessMetrics
     color: string;
   } | null>(null);
 
-  const sum = readinessMetrics.reduce((acc, curr) => acc + curr.A, 0);
+
 
   // Define slices and mapping colors
   const slices = readinessMetrics.map((m, idx) => {

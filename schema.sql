@@ -21,7 +21,15 @@ begin
   values (new.id, new.raw_user_meta_data->>'name', new.email);
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
+
+-- Revoke execute from public/anon/authenticated for handle_new_user
+revoke execute on function public.handle_new_user() from public;
+revoke execute on function public.handle_new_user() from anon, authenticated;
+
+-- If rls_auto_enable exists, revoke for it too
+revoke execute on function public.rls_auto_enable() from public;
+revoke execute on function public.rls_auto_enable() from anon, authenticated;
 
 create trigger on_auth_user_created
   after insert on auth.users
@@ -103,3 +111,32 @@ create table public.submissions (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Enable RLS and add secure policies to resolve Supabase linter warnings
+
+alter table public.users enable row level security;
+drop policy if exists "Allow all access to users" on public.users;
+create policy "Users can view their own profile" on public.users for select using (auth.uid() = id);
+create policy "Users can update their own profile" on public.users for update using (auth.uid() = id);
+
+alter table public.resumes enable row level security;
+drop policy if exists "Allow all access to resumes" on public.resumes;
+create policy "Users can manage their own resumes" on public.resumes for all using (auth.uid() = user_id);
+
+alter table public.interviews enable row level security;
+drop policy if exists "Allow all access to interviews" on public.interviews;
+create policy "Users can manage their own interviews" on public.interviews for all using (auth.uid() = user_id);
+
+alter table public.jobs enable row level security;
+drop policy if exists "Allow all access to jobs" on public.jobs;
+create policy "Jobs are publicly readable" on public.jobs for select using (true);
+-- Insert/Update/Delete should be done via service_role
+
+alter table public.questions enable row level security;
+drop policy if exists "Allow all access to questions" on public.questions;
+create policy "Questions are publicly readable" on public.questions for select using (true);
+-- Insert/Update/Delete should be done via service_role
+
+alter table public.submissions enable row level security;
+drop policy if exists "Allow all access to submissions" on public.submissions;
+create policy "Users can manage their own submissions" on public.submissions for all using (auth.uid() = user_id);
