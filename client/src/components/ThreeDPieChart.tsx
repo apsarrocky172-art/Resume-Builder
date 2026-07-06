@@ -114,7 +114,7 @@ export const ThreeDPieChart: React.FC<ThreeDPieChartProps> = ({ readinessMetrics
 
     const isRightSide = Math.cos(slice.midAngle) >= 0;
     const endX = isRightSide ? cx + rx + 65 : cx - rx - 65;
-    const textAnchor = isRightSide ? 'start' : 'end';
+    const textAnchor: "start" | "end" = isRightSide ? 'start' : 'end';
     const textX = isRightSide ? endX + 8 : endX - 8;
 
     return {
